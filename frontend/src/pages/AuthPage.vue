@@ -61,7 +61,6 @@ export default {
           login: form.value.login,
           password: form.value.password,
         });
-        debugger;
         // Сохраняем токен в localStorage
         localStorage.setItem("token", res.token);
 
@@ -74,7 +73,7 @@ export default {
         // localStorage.setItem('isAuthenticated', 'true');
 
         // Перенаправление на защищенную страницу
-        // router.push('/dashboard');
+        router.push("/");
       } catch (error) {
         errorMessage.value = "Неверный логин или пароль";
         console.error("Ошибка авторизации:", error);

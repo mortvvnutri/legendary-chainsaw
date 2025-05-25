@@ -1,9 +1,7 @@
-<script setup>
-import LoginForm from './pages/AuthPage.vue'
-</script>
+<script setup></script>
 
 <template>
-  <LoginForm />
+  <RouterView />
 </template>
 
 <style scoped>
