@@ -1,7 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from db_connect import get_connection
-import psycopg2
-from datetime import datetime, timedelta, timezone
+import asyncpg
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
@@ -10,63 +9,61 @@ router = APIRouter(prefix="/dashboard", tags=["dashboard"])
     500: {"description": "Internal server error"},
     503: {"description": "Database unavailable"}
 })
-def get_dashboard():
+async def get_dashboard():
     try:
-        conn = get_connection()
-        cur = conn.cursor()
+        conn = await get_connection()
 
-        # Получаем команды
-        cur.execute("SELECT team_id, login FROM teams ORDER BY team_id")
-        teams = cur.fetchall()
+        # Получаем команды, исключая админа
+        teams = await conn.fetch("SELECT team_id, login, status FROM teams WHERE login != 'admin' ORDER BY team_id")
 
         # Получаем все задания
-        cur.execute("SELECT task_id FROM task ORDER BY task_id")
-        task_ids = [row[0] for row in cur.fetchall()]
+        task_rows = await conn.fetch("SELECT task_id FROM task ORDER BY task_id")
+        task_ids = [row["task_id"] for row in task_rows]
 
-        # Все решения
-        cur.execute("SELECT team_id, task_id, condition, sent_at, approved_at FROM solution")
-        solutions_raw = cur.fetchall()
+        # Получаем все решения
+        solutions_raw = await conn.fetch("SELECT team_id, task_id, condition FROM solution")
 
-        # Последняя активность для определения подключения
-        cur.execute("SELECT team_id, MAX(sent_at) FROM solution GROUP BY team_id")
-        now = datetime.now(timezone.utc)
-        activity = {
-            row[0]: "подключена" if now - row[1] <= timedelta(minutes=2) else "отключена"
-            for row in cur.fetchall()
-        }
-
-        # Решения по командам и задачам
+        # Обрабатываем статусы решений
         solutions = {}
-        for team_id, task_id, condition, _, _ in solutions_raw:
+        for row in solutions_raw:
+            team_id = row["team_id"]
+            task_id = row["task_id"]
+            condition = row["condition"]
+
             if team_id not in solutions:
                 solutions[team_id] = {}
+
             if condition == "approve":
                 status = "зачет"
-            elif condition == "verification":
+            elif condition == "verification" or condition == "sent":
                 status = "отправлен"
             else:
                 status = "отклонено"
+
             solutions[team_id][task_id] = status
 
-        # Формируем итог
+        # Собираем дашборд
         result = []
-        for team_id, login in teams:
-            row = {
+        for row in teams:
+            team_id = row["team_id"]
+            login = row["login"]
+            online_status = row["status"]
+
+            result.append({
                 "team_name": login,
-                "status": activity.get(team_id, "отключена"),
+                "status": "подключена" if online_status == "online" else "отключена",
                 "files": {
                     str(task_id): solutions.get(team_id, {}).get(task_id, "")
                     for task_id in task_ids
                 }
-            }
-            result.append(row)
+            })
 
         return result
 
-    except psycopg2.OperationalError as e:
+    except asyncpg.PostgresError as e:
         raise HTTPException(status_code=503, detail=f"Database unavailable: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
     finally:
         if 'conn' in locals():
-            conn.close()
+            await conn.close()

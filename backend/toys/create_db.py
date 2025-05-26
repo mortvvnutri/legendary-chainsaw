@@ -12,25 +12,6 @@ DB_HOST = os.getenv("POSTGRES_HOST", "localhost")
 DB_PORT = os.getenv("POSTGRES_PORT", "5432")
 
 SQL_SCRIPT = """
-CREATE TABLE IF NOT EXISTS "auth_tokens" (
-    "token_id" bigint NOT NULL,
-    "token" varchar(255) NOT NULL UNIQUE,
-    "expires_at" timestamp with time zone NOT NULL,
-    "team_id" bigint NOT NULL,
-    PRIMARY KEY ("token_id")
-);
-
-CREATE TABLE IF NOT EXISTS "solution" (
-    "solution_id" bigint NOT NULL,
-    "condition" varchar(255) NOT NULL,
-    "answer" varchar(255) NOT NULL,
-    "sent_at" timestamp with time zone NOT NULL,
-    "approved_at" timestamp with time zone,
-    "team_id" bigint NOT NULL,
-    "task_id" bigint NOT NULL,
-    PRIMARY KEY ("solution_id")
-);
-
 CREATE TABLE IF NOT EXISTS "teams" (
     "team_id" bigint NOT NULL,
     "updated_at" timestamp with time zone NOT NULL,
@@ -38,26 +19,31 @@ CREATE TABLE IF NOT EXISTS "teams" (
     "password_hash" varchar(255) NOT NULL,
     "password_salt" varchar(255) NOT NULL,
     "created_at" timestamp with time zone NOT NULL,
+    "status" varchar(20) DEFAULT 'offline',
+    "viewed_tasks" bigint[] DEFAULT '{}',
     PRIMARY KEY ("team_id")
 );
 
 CREATE TABLE IF NOT EXISTS "task" (
     "task_id" bigint NOT NULL,
-    "answer" varchar(255) NOT NULL,
+    "answer" jsonb NOT NULL,
     "qwestion" varchar(255) NOT NULL,
     "created_at" timestamp with time zone NOT NULL,
     PRIMARY KEY ("task_id")
 );
 
--- Внешние ключи
-ALTER TABLE "auth_tokens" 
-    ADD CONSTRAINT "auth_tokens_fk3" FOREIGN KEY ("team_id") REFERENCES "teams"("team_id");
-
-ALTER TABLE "solution" 
-    ADD CONSTRAINT "solution_fk5" FOREIGN KEY ("team_id") REFERENCES "teams"("team_id");
-
-ALTER TABLE "solution" 
-    ADD CONSTRAINT "solution_fk6" FOREIGN KEY ("task_id") REFERENCES "task"("task_id");
+CREATE TABLE IF NOT EXISTS "solution" (
+    "solution_id" bigint NOT NULL,
+    "condition" varchar(255) NOT NULL,
+    "answer" jsonb NOT NULL,
+    "sent_at" timestamp with time zone NOT NULL,
+    "approved_at" timestamp with time zone,
+    "team_id" bigint NOT NULL,
+    "task_id" bigint NOT NULL,
+    PRIMARY KEY ("solution_id"),
+    CONSTRAINT "solution_fk5" FOREIGN KEY ("team_id") REFERENCES "teams"("team_id"),
+    CONSTRAINT "solution_fk6" FOREIGN KEY ("task_id") REFERENCES "task"("task_id")
+);
 """
 
 def create_db():
