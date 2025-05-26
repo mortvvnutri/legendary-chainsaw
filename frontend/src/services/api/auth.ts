@@ -8,4 +8,9 @@ export default {
       token: response.data.token,
     };
   },
+
+  async adminLogin(credentials) {
+    const res = await apiClient.post("/auth/login/admin", credentials);
+    return res.data;
+  },
 };

@@ -13,6 +13,10 @@
             class="block text-sm font-medium text-gray-300 mb-1"
             >Логин</label
           >
+          <label class="flex items-center mt-4">
+            <input v-model="form.isAdmin" type="checkbox" class="mr-2" />
+            <span>Войти как администратор</span>
+          </label>
           <input
             type="text"
             id="login"
@@ -69,6 +73,7 @@ export default {
     const form = ref({
       login: "",
       password: "",
+      isAdmin: false,
     });
     const errorMessage = ref("");
     const isLoading = ref(false);
@@ -78,14 +83,26 @@ export default {
       isLoading.value = true;
 
       try {
-        const res = await auth.login({
+        const credentials = {
           login: form.value.login,
           password: form.value.password,
-        });
+        };
+
+        let res;
+        if (form.value.isAdmin) {
+          // Вход как администратор
+          res = await auth.adminLogin(credentials);
+          localStorage.setItem("isAdmin", "true");
+          router.push("/admin");
+        } else {
+          // Вход как команда
+          res = await auth.teamLogin(credentials);
+          localStorage.removeItem("isAdmin"); // Убедимся, что не админ
+          const redirect = router.currentRoute.value.query.redirect || "/team";
+          router.push(redirect);
+        }
 
         localStorage.setItem("token", res.token);
-        const redirect = router.currentRoute.value.query.redirect || "/team";
-        router.push(redirect);
       } catch (error) {
         errorMessage.value = "Неверный логин или пароль";
         console.error("Ошибка авторизации:", error);
@@ -93,7 +110,6 @@ export default {
         isLoading.value = false;
       }
     };
-
     return {
       form,
       errorMessage,
