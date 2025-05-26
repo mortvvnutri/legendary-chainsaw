@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: rocketloud/frontend:latest
+    container_name: rocketloud-frontend
+    ports:
+      - "80:80"
+    volumes:
+      - static_data:/usr/share/nginx/html
+    networks:
+      - rocketloud-network
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - VUE_APP_API_URL=http://api.rocketloud.ru:8000
+    labels:
+      - "com.docker.compose.version=latest"
+      - "maintainer=your_name"
+
+networks:
+  rocketloud-network:
+    driver: bridge
+
+volumes:
+  static_data:
+    driver: local
