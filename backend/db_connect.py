@@ -1,16 +1,14 @@
 import os
-import asyncpg
+import psycopg2
 from dotenv import load_dotenv
 
 load_dotenv()
 
-DB_CONFIG = {
-    "user": os.getenv("POSTGRES_USER"),
-    "password": os.getenv("POSTGRES_PASSWORD"),
-    "database": os.getenv("POSTGRES_DB"),
-    "host": os.getenv("POSTGRES_HOST", "localhost"),
-    "port": int(os.getenv("POSTGRES_PORT", 5432)),
-}
-
-async def get_connection():
-    return await asyncpg.connect(**DB_CONFIG)
+def get_connection():
+    return psycopg2.connect(
+        dbname=os.getenv("POSTGRES_DB"),
+        user=os.getenv("POSTGRES_USER"),
+        password=os.getenv("POSTGRES_PASSWORD"),
+        host=os.getenv("POSTGRES_HOST", "localhost"),
+        port=os.getenv("POSTGRES_PORT", "5432")
+    )
